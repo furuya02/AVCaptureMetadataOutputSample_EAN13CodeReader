@@ -26,8 +26,8 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
         let captureSession = AVCaptureSession()
         
         // 入力（背面カメラ）
-        let videoDevice = AVCaptureDevice.defaultDevice(withMediaType: AVMediaTypeVideo)
-        let videoInput = try! AVCaptureDeviceInput.init(device: videoDevice)
+        let videoDevice = AVCaptureDevice.default(for: AVMediaType.video)
+        let videoInput = try! AVCaptureDeviceInput.init(device: videoDevice!)
         captureSession.addInput(videoInput)
 
         // 出力（ビデオデータ）
@@ -37,7 +37,7 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
         // メタデータを検出した際のデリゲート設定
         metadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
         // EAN-13コードの認識を設定
-        metadataOutput.metadataObjectTypes = [AVMetadataObjectTypeEAN13Code,AVMetadataObjectTypeEAN8Code]
+        metadataOutput.metadataObjectTypes = [AVMetadataObject.ObjectType.ean13, AVMetadataObject.ObjectType.ean8]
         
         // 検出エリアのビュー
         let x: CGFloat = 0.05
@@ -54,11 +54,10 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
         metadataOutput.rectOfInterest = CGRect(x: y,y: 1-x-width,width: height,height: width)
         
         // プレビュー
-        if let videoLayer = AVCaptureVideoPreviewLayer.init(session: captureSession) {
-            videoLayer.frame = previewView.bounds
-            videoLayer.videoGravity = AVLayerVideoGravityResizeAspectFill
-            previewView.layer.addSublayer(videoLayer)
-        }
+        let videoLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+        videoLayer.frame = previewView.bounds
+        videoLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
+        previewView.layer.addSublayer(videoLayer)
         
         // セッションの開始
         DispatchQueue.global(qos: .userInitiated).async {
@@ -69,11 +68,11 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
         timer.fire()
     }
     
-    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputMetadataObjects metadataObjects: [Any]!, from connection: AVCaptureConnection!) {
+    func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
         // 複数のメタデータを検出できる
         for metadata in metadataObjects as! [AVMetadataMachineReadableCodeObject] {
             // EAN-13Qコードのデータかどうかの確認
-            if metadata.type == AVMetadataObjectTypeEAN13Code || metadata.type == AVMetadataObjectTypeEAN8Code{
+            if metadata.type == AVMetadataObject.ObjectType.ean13 || metadata.type == AVMetadataObject.ObjectType.ean8 {
                 if metadata.stringValue != nil {
                     // 検出データを取得
                     counter = 0
@@ -89,7 +88,7 @@ class ViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
         }
     }
     
-    func update(tm: Timer) {
+    @objc func update(tm: Timer) {
         counter += 1
         print(counter)
         if 1 < counter {
